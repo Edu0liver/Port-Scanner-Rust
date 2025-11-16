@@ -1,8 +1,12 @@
 use clap::Parser;
 use owo_colors::OwoColorize;
-use thiserror::Error;
-use std::{collections::HashMap, net::{SocketAddr, TcpStream, ToSocketAddrs, IpAddr}, time::Duration};
 use rayon::{ThreadPool, prelude::*};
+use thiserror::Error;
+use std::{
+    collections::HashMap,
+    net::{IpAddr, SocketAddr, TcpStream, ToSocketAddrs},
+    time::Duration,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about)]
@@ -29,7 +33,7 @@ struct Args {
 struct Configs<'a> {
     args: &'a Args,
     pool: &'a ThreadPool,
-} 
+}
 
 #[derive(Error, Debug)]
 pub enum ConnectError {
@@ -59,21 +63,21 @@ fn exec(configs: Configs) {
 fn get_service_name(port: u16) -> &'static str {
     static SERVICES: once_cell::sync::Lazy<HashMap<u16, &str>> = once_cell::sync::Lazy::new(|| {
         let m = HashMap::from([
-            (21,"FTP"),
-            (22,"SSH"),
-            (23,"Telnet"),
-            (25,"SMTP"),
-            (53,"DNS"),
-            (80,"HTTP"),
-            (110,"POP3"),
-            (143,"IMAP"),
-            (443,"HTTPS"),
-            (3306,"MySQL"),
-            (3389,"RDP"),
-            (5432,"PostgreSQL"),
-            (8080,"HTTP-Alt"),
+            (21, "FTP"),
+            (22, "SSH"),
+            (23, "Telnet"),
+            (25, "SMTP"),
+            (53, "DNS"),
+            (80, "HTTP"),
+            (110, "POP3"),
+            (143, "IMAP"),
+            (443, "HTTPS"),
+            (3306, "MySQL"),
+            (3389, "RDP"),
+            (5432, "PostgreSQL"),
+            (8080, "HTTP-Alt"),
         ]);
-        
+
         m
     });
 
@@ -84,7 +88,11 @@ fn scan(configs: &Configs, ports: &[u16]) {
     let host_ip: Option<IpAddr> = match configs.args.host.parse::<IpAddr>() {
         Ok(ip) => Some(ip),
         Err(_) => {
-            match (configs.args.host.as_str(), 0).to_socket_addrs().ok().and_then(|mut it| it.next()) {
+            match (configs.args.host.as_str(), 0)
+                .to_socket_addrs()
+                .ok()
+                .and_then(|mut it| it.next())
+            {
                 Some(sa) => Some(sa.ip()),
                 None => None,
             }
@@ -106,12 +114,13 @@ fn scan(configs: &Configs, ports: &[u16]) {
             match TcpStream::connect_timeout(&target, timeout) {
                 Ok(_) => {
                     let service = get_service_name(*port);
-                    println!("{} {} - {}", 
+                    println!(
+                        "{} {} - {}",
                         format!("{}/tcp", port).green(),
                         "ABERTA".bold(),
                         service
                     );
-                },
+                }
                 Err(e) if e.kind() == std::io::ErrorKind::TimedOut => (), // timed out / closed
                 Err(e) => eprintln!("{}: error: {}", *port, e),
             }
@@ -123,7 +132,11 @@ fn main() {
     let args = Args::parse();
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(args.threads)
-        .build().unwrap();
+        .build()
+        .unwrap();
 
-    exec(Configs{args:&args, pool:&pool})
+    exec(Configs {
+        args: &args,
+        pool: &pool,
+    })
 }
